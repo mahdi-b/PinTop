@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1
+
+- Wires in the live Lemon Squeezy store (423819) and PinTop product (1194312): license
+  activation now rejects a key issued for any other product, and the website's Buy button
+  points at the real $3.99 checkout.
+
 ## 0.5.0
 
 - Adds a **7-day free trial and one-time $3.99 license**. The menu shows the trial state

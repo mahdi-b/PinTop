@@ -78,10 +78,10 @@ private enum LicenseConfiguration {
   static let purchaseURL = URL(string: "https://pintop.cognitivediscovery.com/#buy")!
   static let activationURL = URL(string: "https://api.lemonsqueezy.com/v1/licenses/activate")!
 
-  // TODO(before public release): set to the real Lemon Squeezy store and product IDs so a
-  // key for some other product is rejected. A value of 0 skips that check (development only).
-  static let expectedStoreID = 0
-  static let expectedProductID = 0
+  // The Lemon Squeezy store and product that sell PinTop. Activation rejects a key issued for
+  // any other store/product. (A value of 0 skips that check; used only during development.)
+  static let expectedStoreID = 423819
+  static let expectedProductID = 1194312
 }
 
 private final class LicenseManager {
