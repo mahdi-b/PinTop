@@ -165,13 +165,12 @@ Keep `keyCode` and `keyLabel` consistent. The displayed shortcut is generated fr
 
 ## Website (Cloudflare Pages)
 
-The product page lives in `site/` as a single self-contained `index.html`. It deploys on Cloudflare Pages' free tier straight from this repository:
+The `site/` directory is the CognitiveDiscovery LLC website: `site/index.html` is the company homepage (consulting + software catalog) and `site/pintop/index.html` is the PinTop product page. Two Cloudflare Pages projects (both free tier) deploy from this one repository, so the PinTop page is reachable at `pintop.cognitivediscovery.com` and at `cognitivediscovery.com/pintop/`:
 
-1. In the Cloudflare dashboard: **Workers & Pages → Create → Pages → Connect to Git**, choose `mahdi-b/PinTop`.
-2. Build settings: no framework, **build command empty**, **build output directory `site`**.
-3. After the first deploy: **Custom domains → Add**, enter `pintop.cognitivediscovery.com` — Cloudflare creates the DNS record automatically since the domain is already on Cloudflare.
+1. In the Cloudflare dashboard: **Workers & Pages → Create → Pages → Connect to Git**, choose `mahdi-b/PinTop`. Build settings: no framework, **build command empty**, **build output directory `site`**. After the first deploy, add the custom domains `cognitivediscovery.com` and `www.cognitivediscovery.com`.
+2. Create a **second** Pages project from the same repository with **build output directory `site/pintop`**, and add the custom domain `pintop.cognitivediscovery.com`.
 
-Every `git push` that touches `site/` redeploys the page automatically.
+Cloudflare creates the DNS records automatically since the domain is on Cloudflare, and every `git push` that touches `site/` redeploys both projects.
 
 ## Version 0.5.0 changes
 

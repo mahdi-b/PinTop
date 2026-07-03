@@ -11,8 +11,9 @@
   key is entered, verified against PinTop's store/product and then stored locally forever.
 - The trial start date is stored in preferences and in an Application Support marker file
   (the earliest wins). This is an honesty gate, not DRM.
-- Adds the product landing page under `site/` (static, self-contained), intended for
-  Cloudflare Pages at pintop.cognitivediscovery.com.
+- Adds the CognitiveDiscovery LLC website under `site/` (static, self-contained): a company
+  homepage plus the PinTop product page, served via Cloudflare Pages' free tier at
+  `pintop.cognitivediscovery.com` (and also `cognitivediscovery.com/pintop/`).
 
 ## 0.4.3
 
