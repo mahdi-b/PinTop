@@ -72,6 +72,15 @@ Select **Pin Mode → Live video mirror** first. (Requires macOS 13+.)
 - While "Starting live mirror…" is still in progress (pin a large window of a busy app), immediately pin a different window: exactly one mirror panel appears, for the most recent request. No second panel is left floating, and unpinning removes everything.
 - Choose **About PinTop** from the menu: the standard About panel opens in front of other apps, showing the PinTop icon, the version and build from Info.plist, and the CognitiveDiscovery LLC copyright.
 
+## Trial and license
+
+- On a fresh machine (or after `defaults delete com.cognitivediscovery.pintop` and removing `~/Library/Application Support/PinTop/`), the menu shows "Free trial: 7 days left" plus **Buy PinTop ($3.99)…** and **Enter License Key…**.
+- Deleting only the preferences does not reset the trial (the Application Support marker restores the earlier date), and vice versa.
+- **Buy PinTop ($3.99)…** opens the purchase page in the default browser.
+- With the trial expired, pressing the shortcut on an unpinned window reports that the trial ended and does not pin; **Unpin Window** and unpinning via the shortcut still work for an existing pin.
+- Entering an empty or invalid key shows a clear error; entering a valid key shows "License activated", the menu switches to "License: Active", and the purchase items disappear.
+- After activation, quit and relaunch: still licensed (stored locally, no network request on launch).
+
 ## Limitations to confirm
 
 - The live mirror is **view-only**: you cannot click or type into the mirrored content; interact with the real window instead.

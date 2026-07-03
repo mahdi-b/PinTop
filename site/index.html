@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PinTop — keep any window on top on your Mac</title>
+<meta name="description" content="PinTop is a tiny macOS menu-bar utility that keeps the window you care about visible. Free 7-day trial, then $3.99 once. No subscription, no accounts, no tracking.">
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1d1d1f;
+    --muted: #6e6e73;
+    --card: #ffffff;
+    --border: #e5e5ea;
+    --accent: #0071e3;
+    --accent-fg: #ffffff;
+    --shadow: 0 8px 30px rgba(0, 0, 0, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161617;
+      --fg: #f5f5f7;
+      --muted: #a1a1a6;
+      --card: #1f1f21;
+      --border: #333336;
+      --accent: #2997ff;
+      --accent-fg: #0b0b0c;
+      --shadow: 0 8px 30px rgba(0, 0, 0, .5);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 17px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Hero */
+  .hero { text-align: center; padding: 88px 0 56px; }
+  .hero .glyph { font-size: 64px; line-height: 1; }
+  .hero h1 { font-size: clamp(40px, 7vw, 56px); letter-spacing: -.02em; margin-top: 16px; }
+  .hero p.tagline { font-size: clamp(19px, 3vw, 24px); color: var(--muted); margin: 12px auto 0; max-width: 34em; }
+  .cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 32px; }
+  .button {
+    display: inline-block; padding: 12px 26px; border-radius: 980px;
+    font-size: 17px; font-weight: 600; border: 1px solid transparent;
+  }
+  .button.primary { background: var(--accent); color: var(--accent-fg); }
+  .button.primary:hover { filter: brightness(1.08); text-decoration: none; }
+  .button.secondary { border-color: var(--accent); color: var(--accent); }
+  .button.secondary:hover { text-decoration: none; background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .fineprint { color: var(--muted); font-size: 14px; margin-top: 14px; }
+
+  /* "See how it works" — collapsed by default so the hero stays clean. */
+  .howto { margin-top: 36px; border: none; padding: 0; }
+  .howto summary {
+    cursor: pointer; color: var(--accent); font-weight: 600; list-style: none; font-size: 15px;
+  }
+  .howto summary::-webkit-details-marker { display: none; }
+  .howto summary::after { content: " ▾"; }
+  .howto[open] summary::after { content: " ▴"; }
+
+  /* Mock illustration */
+  .mock {
+    position: relative; max-width: 620px; height: 300px; margin: 28px auto 0;
+    border-radius: 16px; overflow: hidden;
+    background: linear-gradient(160deg, #6aa9ff33, #b06aff22);
+    border: 1px solid var(--border);
+  }
+  .mockwin {
+    position: absolute; border-radius: 10px; background: var(--card);
+    border: 1px solid var(--border); box-shadow: var(--shadow);
+  }
+  .mockwin .bar { height: 26px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; padding: 0 10px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; opacity: .9; }
+  .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+  .mockwin .body { padding: 12px 14px; font-size: 13px; color: var(--muted); }
+  .back { left: 6%; top: 14%; width: 56%; height: 72%; }
+  .front { right: 6%; top: 26%; width: 52%; height: 66%; }
+  .front .badge {
+    position: absolute; top: -12px; right: 12px; background: var(--accent); color: var(--accent-fg);
+    font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px;
+  }
+  .skeleton { height: 9px; border-radius: 5px; background: var(--border); margin: 9px 0; }
+  .skeleton.w60 { width: 60%; } .skeleton.w85 { width: 85%; } .skeleton.w40 { width: 40%; }
+
+  /* Sections */
+  section { padding: 56px 0; border-top: 1px solid var(--border); }
+  section h2 { font-size: 32px; letter-spacing: -.01em; margin-bottom: 8px; }
+  section p.lead { color: var(--muted); max-width: 44em; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 28px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px;
+  }
+  .card h3 { font-size: 21px; margin-bottom: 8px; }
+  .card p { color: var(--muted); font-size: 15px; }
+  .card .tag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+
+  /* Pricing */
+  .price-box {
+    background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+    max-width: 460px; margin: 28px auto 0; padding: 36px; text-align: center;
+  }
+  .price-box .price { font-size: 48px; font-weight: 700; letter-spacing: -.02em; }
+  .price-box .per { color: var(--muted); font-size: 15px; }
+  .price-box ul { list-style: none; padding: 0; margin: 20px 0 26px; color: var(--muted); font-size: 15px; }
+  .price-box li { padding: 4px 0; }
+
+  /* FAQ */
+  details { border-bottom: 1px solid var(--border); padding: 14px 0; }
+  details summary { cursor: pointer; font-weight: 600; }
+  details p { color: var(--muted); margin-top: 8px; font-size: 15px; }
+
+  footer { text-align: center; color: var(--muted); font-size: 14px; padding: 48px 24px 64px; }
+</style>
+</head>
+<body>
+<main>
+
+  <div class="hero">
+    <div class="glyph">📌</div>
+    <h1>PinTop</h1>
+    <p class="tagline">Keep any window on top. A tiny Mac menu-bar utility — press <strong>⌘⌥T</strong> and the window you care about stays visible while you work in another.</p>
+    <div class="cta">
+      <a class="button primary" href="https://github.com/mahdi-b/PinTop/releases/latest/download/PinTop.zip">Download free trial</a>
+      <a class="button secondary" href="#buy">Buy — $3.99 once</a>
+    </div>
+    <p class="fineprint">Free for 7 days, fully featured · macOS 13 or later, Apple Silicon · Notarized by Apple</p>
+
+    <details class="howto">
+      <summary>See how it works</summary>
+      <div class="mock" aria-hidden="true">
+      <div class="mockwin back">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+        <div class="body">Your editor — keeps keyboard focus
+          <div class="skeleton w85"></div><div class="skeleton w60"></div><div class="skeleton w85"></div><div class="skeleton w40"></div>
+        </div>
+      </div>
+      <div class="mockwin front">
+        <span class="badge">Always on top</span>
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+        <div class="body">The window you pinned — live
+          <div class="skeleton w60"></div><div class="skeleton w85"></div><div class="skeleton w85"></div>
+        </div>
+      </div>
+      </div>
+    </details>
+  </div>
+
+  <section>
+    <h2>Two ways to pin</h2>
+    <p class="lead">macOS has no public way for one app to force another app's window to stay on top — so PinTop gives you the two honest alternatives, and lets you pick per pin.</p>
+    <div class="cards">
+      <div class="card">
+        <span class="tag">Live mirror</span>
+        <h3>Genuinely always on top</h3>
+        <p>PinTop floats a live video copy of your chosen window above everything, at the window's real size. The original keeps keyboard focus — keep typing in it while the mirror stays visible. Perfect for a video call, a build log, or reference material. View-only, draggable, resizable.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Raise mode</span>
+        <h3>The real, clickable window</h3>
+        <p>PinTop asks macOS to re-raise the actual window whenever something covers it. You interact with the window itself — it just keeps coming back to the front as you switch between apps.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="buy">
+    <h2>Simple pricing</h2>
+    <p class="lead">Try everything free for a week. If PinTop earns its place in your menu bar, buy it once and it's yours.</p>
+    <div class="price-box">
+      <div class="price">$3.99</div>
+      <div class="per">one time · no subscription</div>
+      <ul>
+        <li>7-day free trial, no signup</li>
+        <li>License key delivered by email</li>
+        <li>All future 0.x and 1.x updates</li>
+      </ul>
+      <!-- TODO: replace with the real Lemon Squeezy checkout URL once the store exists. -->
+      <a class="button primary" href="https://cognitivediscovery.lemonsqueezy.com/buy/REPLACE-WITH-PRODUCT-UUID">Buy PinTop</a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Private by construction</h2>
+    <p class="lead">PinTop has no accounts, no analytics, and no tracking. Mirrored video never leaves your Mac and is never written to disk. The app's only network request, ever, is the single call that validates your license key when you enter it. The <a href="https://github.com/mahdi-b/PinTop">source is public on GitHub</a> — check for yourself.</p>
+  </section>
+
+  <section>
+    <h2>Questions</h2>
+    <details>
+      <summary>Why does PinTop ask for Accessibility or Screen Recording permission?</summary>
+      <p>Raise mode uses macOS Accessibility to identify the focused window and ask the system to raise it — nothing else. The live mirror uses Apple's ScreenCaptureKit, which requires the Screen Recording permission to capture the one window you pin, only while it's pinned. PinTop is notarized by Apple and the source is public.</p>
+    </details>
+    <details>
+      <summary>What happens when the trial ends?</summary>
+      <p>Creating new pins pauses until you enter a license key. Nothing is deleted, nothing nags you on a timer — the menu simply shows a buy link and a key field.</p>
+    </details>
+    <details>
+      <summary>Which Macs does it run on?</summary>
+      <p>Apple Silicon Macs running macOS 13 Ventura or later. Raise mode works back to macOS 12.</p>
+    </details>
+    <details>
+      <summary>Is the mirror interactive?</summary>
+      <p>No — the mirror is a live, view-only copy. That's what lets the original window keep keyboard focus while the mirror stays on top. Click the visible edge of the original (or the mirror's source window) to interact with the real thing.</p>
+    </details>
+    <details>
+      <summary>Refunds?</summary>
+      <p>If PinTop doesn't work out within 14 days of purchase, reply to your purchase email and you'll get a refund.</p>
+    </details>
+  </section>
+
+</main>
+<footer>
+  © 2026 CognitiveDiscovery LLC · <a href="https://github.com/mahdi-b/PinTop">GitHub</a> · <a href="https://github.com/mahdi-b/PinTop/issues">Support</a>
+</footer>
+</body>
+</html>

@@ -67,6 +67,174 @@ private let fallbackRaiseEveryMilliseconds = 1_000
 private let fallbackRaiseLeewayMilliseconds = 150
 private let accessibilityMessageTimeout: Float = 0.5
 
+// MARK: - Trial and license
+
+// PinTop is free to use for `trialDays`, then requires a one-time license purchased from the
+// website. Activation is the ONLY network request the app ever makes: one HTTPS call to the
+// Lemon Squeezy license API when the user enters a key, after which the activation is stored
+// locally and never re-checked. Everything else stays fully offline.
+private enum LicenseConfiguration {
+  static let trialDays = 7
+  static let purchaseURL = URL(string: "https://pintop.cognitivediscovery.com/#buy")!
+  static let activationURL = URL(string: "https://api.lemonsqueezy.com/v1/licenses/activate")!
+
+  // TODO(before public release): set to the real Lemon Squeezy store and product IDs so a
+  // key for some other product is rejected. A value of 0 skips that check (development only).
+  static let expectedStoreID = 0
+  static let expectedProductID = 0
+}
+
+private final class LicenseManager {
+  enum State: Equatable {
+    case licensed
+    case trial(daysRemaining: Int)
+    case expired
+  }
+
+  enum LicenseError: Error {
+    case emptyKey
+    case network(String)
+    case invalidResponse
+    case rejected(String)
+
+    var message: String {
+      switch self {
+      case .emptyKey:
+        return "Enter a license key first."
+      case .network(let detail):
+        return "Could not reach the license server: \(detail)"
+      case .invalidResponse:
+        return "The license server returned an unexpected response; please try again."
+      case .rejected(let detail):
+        return detail
+      }
+    }
+  }
+
+  private static let licenseKeyDefaultsKey = "LicenseKey"
+  private static let licenseActivatedDefaultsKey = "LicenseActivated"
+  private static let trialStartDefaultsKey = "TrialStartDate"
+
+  private let defaults = UserDefaults.standard
+
+  var state: State {
+    if defaults.bool(forKey: Self.licenseActivatedDefaultsKey) { return .licensed }
+
+    let dayLength: TimeInterval = 24 * 60 * 60
+    let elapsed = Date().timeIntervalSince(trialStart)
+    // A clock set backwards counts as day zero rather than extending the trial.
+    let daysUsed = max(0, Int(elapsed / dayLength))
+    let remaining = LicenseConfiguration.trialDays - daysUsed
+    return remaining > 0 ? .trial(daysRemaining: remaining) : .expired
+  }
+
+  // The trial start is recorded in UserDefaults and in a marker file in Application Support;
+  // the earliest of the two wins and each repairs the other. This is an honesty gate for a
+  // $3.99 utility, not DRM — a determined user can reset it, and that is acceptable.
+  private var trialStart: Date {
+    let fileURL = Self.trialMarkerURL
+    let fromDefaults = defaults.object(forKey: Self.trialStartDefaultsKey) as? Date
+    let fromFile = (try? String(contentsOf: fileURL, encoding: .utf8))
+      .flatMap { TimeInterval($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+      .map { Date(timeIntervalSince1970: $0) }
+
+    if let start = [fromDefaults, fromFile].compactMap({ $0 }).min() {
+      if fromDefaults == nil { defaults.set(start, forKey: Self.trialStartDefaultsKey) }
+      if fromFile == nil { Self.writeTrialMarker(start, to: fileURL) }
+      return start
+    }
+
+    let start = Date()
+    defaults.set(start, forKey: Self.trialStartDefaultsKey)
+    Self.writeTrialMarker(start, to: fileURL)
+    return start
+  }
+
+  private static var trialMarkerURL: URL {
+    let base =
+      FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+      ?? FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Application Support")
+    return base.appendingPathComponent("PinTop/.first-launch")
+  }
+
+  private static func writeTrialMarker(_ date: Date, to url: URL) {
+    try? FileManager.default.createDirectory(
+      at: url.deletingLastPathComponent(),
+      withIntermediateDirectories: true
+    )
+    try? String(date.timeIntervalSince1970).data(using: .utf8)?.write(to: url)
+  }
+
+  // Activates a key against the Lemon Squeezy license API and stores the result locally.
+  // `completion` is always called on the main thread.
+  func activate(key: String, completion: @escaping (Result<Void, LicenseError>) -> Void) {
+    let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else {
+      completion(.failure(.emptyKey))
+      return
+    }
+
+    var request = URLRequest(url: LicenseConfiguration.activationURL)
+    request.httpMethod = "POST"
+    request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+    var body = URLComponents()
+    body.queryItems = [
+      URLQueryItem(name: "license_key", value: trimmed),
+      URLQueryItem(name: "instance_name", value: "PinTop on \(Host.current().localizedName ?? "Mac")"),
+    ]
+    request.httpBody = body.percentEncodedQuery?.data(using: .utf8)
+
+    URLSession.shared.dataTask(with: request) { data, _, error in
+      let result = Self.parseActivation(data: data, error: error)
+      DispatchQueue.main.async {
+        if case .success = result {
+          self.defaults.set(trimmed, forKey: Self.licenseKeyDefaultsKey)
+          self.defaults.set(true, forKey: Self.licenseActivatedDefaultsKey)
+        }
+        completion(result)
+      }
+    }.resume()
+  }
+
+  private static func parseActivation(data: Data?, error: Error?) -> Result<Void, LicenseError> {
+    if let error {
+      return .failure(.network(error.localizedDescription))
+    }
+    guard let data,
+      let object = try? JSONSerialization.jsonObject(with: data),
+      let json = object as? [String: Any]
+    else {
+      return .failure(.invalidResponse)
+    }
+
+    if let message = json["error"] as? String, !message.isEmpty {
+      return .failure(.rejected(message))
+    }
+    guard json["activated"] as? Bool == true else {
+      return .failure(.rejected("The key could not be activated."))
+    }
+
+    // Reject keys sold for some other store/product than PinTop's.
+    let meta = json["meta"] as? [String: Any]
+    let storeID = meta?["store_id"] as? Int ?? -1
+    let productID = meta?["product_id"] as? Int ?? -1
+    let storeMatches =
+      LicenseConfiguration.expectedStoreID == 0
+      || storeID == LicenseConfiguration.expectedStoreID
+    let productMatches =
+      LicenseConfiguration.expectedProductID == 0
+      || productID == LicenseConfiguration.expectedProductID
+    guard storeMatches, productMatches else {
+      return .failure(.rejected("This license key is for a different product."))
+    }
+
+    return .success(())
+  }
+}
+
 private struct PinnedWindow {
   let token = UUID()
   let element: AXUIElement
@@ -319,6 +487,7 @@ private final class MirrorController: NSObject, SCStreamDelegate, SCStreamOutput
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
   private let statusMenu = NSMenu()
+  private let licenseManager = LicenseManager()
 
   // Ongoing cross-process Accessibility calls for the pinned element are serialized here.
   private let accessibilityQueue = DispatchQueue(
@@ -559,6 +728,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     statusMenu.addItem(.separator())
+    addLicenseMenuItems()
+    statusMenu.addItem(.separator())
 
     let aboutItem = NSMenuItem(
       title: "About PinTop", action: #selector(showAbout), keyEquivalent: "")
@@ -568,6 +739,84 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let quitItem = NSMenuItem(title: "Quit PinTop", action: #selector(quit), keyEquivalent: "q")
     quitItem.target = self
     statusMenu.addItem(quitItem)
+  }
+
+  // Trial/license status plus purchase actions. Once licensed, the purchase items disappear.
+  private func addLicenseMenuItems() {
+    func addDisabled(_ title: String) {
+      let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+      item.isEnabled = false
+      statusMenu.addItem(item)
+    }
+
+    switch licenseManager.state {
+    case .licensed:
+      addDisabled("License: Active")
+      return
+    case .trial(let daysRemaining):
+      addDisabled("Free trial: \(daysRemaining) day\(daysRemaining == 1 ? "" : "s") left")
+    case .expired:
+      addDisabled("Free trial ended — pinning is disabled")
+    }
+
+    let buyItem = NSMenuItem(
+      title: "Buy PinTop ($3.99)…", action: #selector(buyPinTop), keyEquivalent: "")
+    buyItem.target = self
+    statusMenu.addItem(buyItem)
+
+    let keyItem = NSMenuItem(
+      title: "Enter License Key…", action: #selector(enterLicenseKey), keyEquivalent: "")
+    keyItem.target = self
+    statusMenu.addItem(keyItem)
+  }
+
+  @objc private func buyPinTop() {
+    NSWorkspace.shared.open(LicenseConfiguration.purchaseURL)
+  }
+
+  @objc private func enterLicenseKey() {
+    // As an accessory app, PinTop must activate itself or the dialog opens behind other apps.
+    NSApp.activate(ignoringOtherApps: true)
+
+    let alert = NSAlert()
+    alert.messageText = "Enter License Key"
+    alert.informativeText =
+      "Paste the license key from your purchase email. Activation contacts the license "
+      + "server once; PinTop makes no other network requests."
+    alert.addButton(withTitle: "Activate")
+    alert.addButton(withTitle: "Cancel")
+
+    let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
+    field.placeholderString = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+    alert.accessoryView = field
+    alert.window.initialFirstResponder = field
+
+    guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+    setFeedback("Checking license key…")
+    licenseManager.activate(key: field.stringValue) { [weak self] result in
+      guard let self else { return }
+      switch result {
+      case .success:
+        self.setFeedback("License activated — thank you for buying PinTop!")
+      case .failure(let error):
+        self.setFeedback(error.message, isError: true)
+      }
+    }
+  }
+
+  // Blocks creating new pins after the trial ends; unpinning and existing pins still work.
+  private func ensurePinningAllowed() -> Bool {
+    switch licenseManager.state {
+    case .licensed, .trial:
+      return true
+    case .expired:
+      setFeedback(
+        "Free trial ended. Buy PinTop ($3.99) or enter a license key from the menu.",
+        isError: true
+      )
+      return false
+    }
   }
 
   // The standard About panel shows the app icon, name, version/build from Info.plist, and the
@@ -770,6 +1019,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
       setFeedback("Unpinned \(current.displayName).")
       return
     }
+
+    guard ensurePinningAllowed() else { return }
 
     switch pinMode {
     case .raise:

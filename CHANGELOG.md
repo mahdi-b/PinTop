@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.0
+
+- Adds a **7-day free trial and one-time $3.99 license**. The menu shows the trial state
+  ("Free trial: N days left"), a **Buy PinTop ($3.99)…** item that opens the purchase page,
+  and an **Enter License Key…** dialog. After the trial ends, creating new pins is disabled
+  until a key is entered; unpinning and the rest of the menu keep working.
+- License keys are sold through Lemon Squeezy (merchant of record). Activation is the only
+  network request PinTop ever makes: one HTTPS call to the Lemon Squeezy license API when a
+  key is entered, verified against PinTop's store/product and then stored locally forever.
+- The trial start date is stored in preferences and in an Application Support marker file
+  (the earliest wins). This is an honesty gate, not DRM.
+- Adds the product landing page under `site/` (static, self-contained), intended for
+  Cloudflare Pages at pintop.cognitivediscovery.com.
+
 ## 0.4.3
 
 - Replaces the static attribution line in the menu with an **About PinTop** item that opens

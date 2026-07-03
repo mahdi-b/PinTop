@@ -1,8 +1,14 @@
-# PinTop 0.4.3
+# PinTop 0.5.0
 
 PinTop is a small macOS menu-bar utility that keeps a window you care about visible. Focus a normal app window and press **Command + Option + T** to pin it; press the shortcut again while the same window is focused, or choose **Unpin Window** from the menu-bar icon, to stop.
 
 PinTop is built by **CognitiveDiscovery LLC**.
+
+## Trial and purchase
+
+PinTop is free to use, fully featured, for **7 days**. After that, creating new pins requires a **one-time $3.99 license** (no subscription) purchased from the website; unpinning and the menu keep working regardless. The menu shows the trial state, a **Buy PinTop ($3.99)…** link, and **Enter License Key…** for the key from your purchase email.
+
+Entering a key makes the only network request in the app: a single HTTPS call to the license service (Lemon Squeezy), after which the activation is stored on your Mac and never re-checked. There are no accounts, no analytics, and no other networking.
 
 PinTop intentionally manages **one pinned window at a time**. Pinning a different window replaces the existing pin. The menu command acts on the last external application’s currently focused window; the global shortcut is the least ambiguous way to select a window.
 
@@ -101,7 +107,7 @@ This signs with the hardened runtime and a secure timestamp, submits the app to 
 4. Use the menu-bar pin icon to confirm that permission says **Granted**.
 5. If macOS does not recognize the new setting immediately, quit and reopen PinTop.
 
-Accessibility is a broad macOS permission. This source uses it only to identify the focused application/window, read an optional window title, inspect supported actions, perform `AXRaise`, and observe selected-window lifecycle, title, and common focus/order events. PinTop has no networking code and does not write user data.
+Accessibility is a broad macOS permission. This source uses it only to identify the focused application/window, read an optional window title, inspect supported actions, perform `AXRaise`, and observe selected-window lifecycle, title, and common focus/order events. The only data PinTop writes is local: the pin-mode preference, the trial start date, and (after purchase) the license activation. Its only network request is the one-time license activation described above.
 
 ## Screen Recording permission (live-mirror mode only)
 
@@ -156,6 +162,22 @@ Keep `keyCode` and `keyLabel` consistent. The displayed shortcut is generated fr
 - Centralizes shortcut display and behavior.
 - Enforces the macOS deployment target during compilation.
 - Removes unnecessary `codesign --deep` signing.
+
+## Website (Cloudflare Pages)
+
+The product page lives in `site/` as a single self-contained `index.html`. It deploys on Cloudflare Pages' free tier straight from this repository:
+
+1. In the Cloudflare dashboard: **Workers & Pages → Create → Pages → Connect to Git**, choose `mahdi-b/PinTop`.
+2. Build settings: no framework, **build command empty**, **build output directory `site`**.
+3. After the first deploy: **Custom domains → Add**, enter `pintop.cognitivediscovery.com` — Cloudflare creates the DNS record automatically since the domain is already on Cloudflare.
+
+Every `git push` that touches `site/` redeploys the page automatically.
+
+## Version 0.5.0 changes
+
+- Adds a 7-day free trial and a one-time $3.99 license (Lemon Squeezy). The menu shows trial state, a purchase link, and license-key entry; expired trials disable new pins only.
+- Adds the product landing page under `site/`.
+- Activation is PinTop's only network request, made once when a key is entered.
 
 ## Version 0.4.3 changes
 
