@@ -1,0 +1,10 @@
+// Cloudflare Workers config for the PinTop product page served at
+// pintop.cognitivediscovery.com. Deploy with: `npx wrangler deploy -c wrangler.pintop.jsonc`
+// (set that as the deploy command of a second Workers project connected to this repo).
+{
+  "name": "pintop-site",
+  "compatibility_date": "2026-07-01",
+  "assets": {
+    "directory": "./site/pintop"
+  }
+}

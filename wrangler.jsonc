@@ -1,0 +1,11 @@
+// Cloudflare Workers config for the CognitiveDiscovery company site (static assets only).
+// Used when deploying via Cloudflare's Workers flow: `npx wrangler deploy`.
+// Custom domains (cognitivediscovery.com, www) are attached in the dashboard under
+// the worker's Settings → Domains & Routes.
+{
+  "name": "cognitivediscovery-site",
+  "compatibility_date": "2026-07-01",
+  "assets": {
+    "directory": "./site"
+  }
+}
