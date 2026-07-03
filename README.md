@@ -172,6 +172,8 @@ The `site/` directory is the CognitiveDiscovery LLC website: `site/index.html` i
 
 Cloudflare creates the DNS records automatically since the domain is on Cloudflare, and every `git push` that touches `site/` redeploys both projects.
 
+If the dashboard offers the newer **Workers** flow instead (it asks for a deploy command such as `npx wrangler deploy`), use the two checked-in configs: the first project's deploy command is `npx wrangler deploy` (serves `site/` via `wrangler.jsonc`; attach `cognitivediscovery.com` and `www` under Settings → Domains & Routes), and the second project's is `npx wrangler deploy -c wrangler.pintop.jsonc` (serves `site/pintop/`; attach `pintop.cognitivediscovery.com`). Leave the build command empty in both.
+
 ## Version 0.5.0 changes
 
 - Adds a 7-day free trial and a one-time $3.99 license (Lemon Squeezy). The menu shows trial state, a purchase link, and license-key entry; expired trials disable new pins only.
