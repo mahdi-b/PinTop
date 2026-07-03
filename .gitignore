@@ -1,0 +1,5 @@
+# Build output (the notarized app/zip are release artifacts, not source)
+build/
+
+# macOS noise
+.DS_Store
